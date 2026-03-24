@@ -1,30 +1,42 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useAuth } from '@/hooks/useAuth';
-import { Heart, AlertCircle } from 'lucide-react';
 
 export default function LoginPage() {
-  const { login, error } = useAuth();
   const [email, setEmail] = useState('admin@lostfound.com');
   const [password, setPassword] = useState('admin123');
   const [loading, setLoading] = useState(false);
-  const [localError, setLocalError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setLocalError(null);
+    setError(null);
 
-    const success = await login(email, password);
-    if (!success) {
-      setLocalError(error || 'Login failed');
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (response.ok) {
+        router.push('/admin/dashboard');
+      } else {
+        const data = await response.json();
+        setError(data.message || 'Login failed');
+      }
+    } catch (err) {
+      setError('An error occurred. Please try again.');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
@@ -33,7 +45,7 @@ export default function LoginPage() {
         <CardHeader className="space-y-1">
           <div className="flex items-center justify-center gap-2 mb-4">
             <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-              <Heart className="w-5 h-5 text-white" />
+              <span className="text-white font-bold">LF</span>
             </div>
             <span className="text-xl font-bold">Lost & Found</span>
           </div>
@@ -42,10 +54,9 @@ export default function LoginPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {(localError || error) && (
-              <div className="flex gap-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-red-600">{localError || error}</p>
+            {error && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+                {error}
               </div>
             )}
 
@@ -84,21 +95,20 @@ export default function LoginPage() {
             >
               {loading ? 'Signing in...' : 'Sign In'}
             </Button>
-
-            <p className="text-sm text-center text-gray-600">
-              Don't have an account?{' '}
-              <Link href="/admin/register" className="text-blue-600 hover:text-blue-700 font-medium">
-                Register here
-              </Link>
-            </p>
           </form>
 
           <div className="mt-6 pt-6 border-t">
             <p className="text-xs text-gray-500 text-center mb-3">Demo Credentials</p>
-            <div className="space-y-2 text-xs text-gray-600">
+            <div className="space-y-2 text-xs text-gray-600 bg-gray-50 p-3 rounded">
               <p><span className="font-medium">Email:</span> admin@lostfound.com</p>
               <p><span className="font-medium">Password:</span> admin123</p>
             </div>
+          </div>
+
+          <div className="mt-4 text-center">
+            <Link href="/">
+              <Button variant="outline" className="w-full">Back to Home</Button>
+            </Link>
           </div>
         </CardContent>
       </Card>
